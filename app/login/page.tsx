@@ -46,6 +46,10 @@ export default function LoginPage() {
             required
           />
 
+          <div className="flex justify-end">
+            <Link href="/forgot-password" className="text-xs text-indigo-500 hover:underline">Şifremi Unuttum?</Link>
+          </div>
+
           {error && <p className="text-red-500 text-sm">{error}</p>}
 
           <button

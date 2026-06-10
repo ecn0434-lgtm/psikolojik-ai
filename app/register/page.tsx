@@ -32,6 +32,15 @@ export default function RegisterPage() {
       await supabase.from('profiles').update({ mode }).eq('id', userId)
     }
 
+    // Otomatik giriş yap
+    const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
+    if (loginError) {
+      // Email doğrulama gerekiyorsa bildir
+      setError('Kayıt başarılı! Lütfen e-postanıza gelen doğrulama bağlantısına tıklayın, ardından giriş yapın.')
+      setLoading(false)
+      return
+    }
+
     router.push('/chat')
   }
 
