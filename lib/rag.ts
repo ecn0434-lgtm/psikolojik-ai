@@ -9,20 +9,28 @@ export interface SearchResult {
 }
 
 export async function embedText(text: string): Promise<number[]> {
-  const res = await fetch(
-    'https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
-      },
-      body: JSON.stringify({ inputs: text, options: { wait_for_model: true } }),
-    }
-  )
-  if (!res.ok) throw new Error(`Embedding hatası: ${res.status}`)
-  const data = await res.json()
-  return Array.isArray(data[0]) ? data[0] : data
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 8000)
+
+  try {
+    const res = await fetch(
+      'https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+        },
+        body: JSON.stringify({ inputs: text, options: { wait_for_model: true } }),
+        signal: controller.signal,
+      }
+    )
+    if (!res.ok) throw new Error(`Embedding hatası: ${res.status}`)
+    const data = await res.json()
+    return Array.isArray(data[0]) ? data[0] : data
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
 export async function searchDocuments(
@@ -61,8 +69,15 @@ export async function ragQuery(
   systemPrompt: string,
   history: { role: 'user' | 'assistant'; content: string }[] = []
 ): Promise<{ answer: string; sources: SearchResult[] }> {
-  const results = await searchDocuments(query)
-  const context = buildContext(results)
+  // Embedding başarısız olursa RAG'sız devam et
+  let results: SearchResult[] = []
+  let context = ''
+  try {
+    results = await searchDocuments(query)
+    context = buildContext(results)
+  } catch (e) {
+    console.warn('Embedding/search atlandı:', e)
+  }
 
   const userContent = context
     ? `Aşağıdaki kaynaklara dayanarak soruyu yanıtla:\n\n${context}\n\n---\nSoru: ${query}`
