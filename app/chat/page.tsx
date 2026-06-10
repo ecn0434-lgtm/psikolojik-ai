@@ -176,7 +176,7 @@ export default function ChatPage() {
               {messages.length === 0 && (
                 <div className="text-center text-gray-400 mt-16">
                   <p className="text-xl mb-2">Psikoloji Asistanı</p>
-                  <p className="text-sm px-4">DSM-5, genel psikoloji, her şeyi sorabilirsiniz</p>
+                  <p className="text-sm px-4">Psikoloji ile ilgili her şeyi sorabilirsiniz</p>
                 </div>
               )}
               {messages.map((msg, i) => (

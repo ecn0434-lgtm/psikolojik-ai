@@ -35,7 +35,7 @@ export async function embedText(text: string): Promise<number[]> {
 
 export async function searchDocuments(
   query: string,
-  topK: number = 10
+  topK: number = 5
 ): Promise<SearchResult[]> {
   const embedding = await embedText(query)
 
@@ -90,7 +90,7 @@ export async function ragQuery(
 
   const response = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 2048,
+    max_tokens: 1024,
     system: systemPrompt,
     messages,
   })

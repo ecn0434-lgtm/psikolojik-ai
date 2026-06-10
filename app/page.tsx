@@ -6,7 +6,7 @@ export default function Home() {
       <div className="max-w-2xl mx-auto text-center px-6">
         <h1 className="text-4xl font-bold text-indigo-900 mb-4">Psikoloji AI</h1>
         <p className="text-lg text-indigo-700 mb-8">
-          DSM-5 tabanlı psikoloji asistanı. Öğrenciler, klinisyenler ve genel kullanıcılar için.
+          Psikoloji asistanınız. Öğrenciler, klinisyenler ve genel kullanıcılar için.
         </p>
         <div className="flex gap-4 justify-center">
           <Link
