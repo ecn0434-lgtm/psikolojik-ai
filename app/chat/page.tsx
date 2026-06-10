@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import ReactMarkdown from 'react-markdown'
 import { Send, Search, BookOpen, LogOut, Brain } from 'lucide-react'
 import AICharacter, { CharacterState } from '@/components/AICharacter'
+import PsikoWorld from '@/components/PsikoWorld'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -131,10 +132,11 @@ export default function ChatPage() {
   ]
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 50%, #e0e7ff 100%)' }}>
+    <div className="flex h-screen overflow-hidden" style={{ position: 'relative' }}>
+      <PsikoWorld />
 
       {/* Sidebar — masaüstü */}
-      <div className="hidden md:flex w-60 flex-col p-5 shrink-0" style={{ background: 'linear-gradient(180deg, #4c1d95 0%, #6d28d9 50%, #4338ca 100%)' }}>
+      <div className="hidden md:flex w-60 flex-col p-5 shrink-0" style={{ position: 'relative', zIndex: 1, background: 'rgba(76,29,149,0.82)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderRight: '1px solid rgba(167,139,250,0.3)' }}>
         <h1 className="text-lg font-bold text-white mb-2">Psikoloji AI</h1>
         <p className="text-xs text-purple-300 mb-5">Psikoloji asistanınız</p>
 
@@ -175,10 +177,10 @@ export default function ChatPage() {
       </div>
 
       {/* Ana içerik */}
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* Mobil üst bar */}
-        <div className="md:hidden flex items-center justify-between px-4 py-3 shrink-0" style={{ background: 'linear-gradient(90deg, #4c1d95, #6d28d9)' }}>
+        <div className="md:hidden flex items-center justify-between px-4 py-3 shrink-0" style={{ background: 'rgba(76,29,149,0.85)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', borderBottom: '1px solid rgba(167,139,250,0.3)' }}>
           <div className="flex items-center gap-2">
             <AICharacter state={charState} size={36} />
             <span className="text-white font-bold text-sm">Psikoloji AI</span>
@@ -201,7 +203,7 @@ export default function ChatPage() {
         {/* SOHBET */}
         {tab === 'chat' && (
           <>
-            <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4" style={{ background: 'rgba(255,255,255,0.55)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
 
               {/* Boş ekran: büyük karakter */}
               {messages.length === 0 && (
@@ -283,7 +285,7 @@ export default function ChatPage() {
 
         {/* ARAMA */}
         {tab === 'search' && (
-          <div className="p-3 md:p-6 flex-1 overflow-y-auto">
+          <div className="p-3 md:p-6 flex-1 overflow-y-auto" style={{ background: 'rgba(255,255,255,0.55)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
             <form onSubmit={handleSearch} className="flex gap-2 mb-5">
               <input
                 value={searchQuery}
@@ -316,7 +318,7 @@ export default function ChatPage() {
 
         {/* QUIZ */}
         {tab === 'quiz' && (
-          <div className="p-3 md:p-6 flex-1 overflow-y-auto">
+          <div className="p-3 md:p-6 flex-1 overflow-y-auto" style={{ background: 'rgba(255,255,255,0.55)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
             <form onSubmit={generateQuiz} className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 md:p-5 mb-5 space-y-3">
               <h2 className="text-base md:text-lg font-semibold text-purple-900">Quiz Üret</h2>
               <input

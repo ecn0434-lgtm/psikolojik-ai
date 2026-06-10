@@ -18,6 +18,61 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* ── Dünya Psiko'ları yürüyüş animasyonları ── */
+@keyframes w1 {
+  0%,100% { left: 2%;  bottom: 14%; }
+  25%     { left: 11%; bottom: 17%; }
+  50%     { left: 20%; bottom: 14%; }
+  75%     { left: 11%; bottom: 17%; }
+}
+@keyframes w2 {
+  0%,100% { left: 16%; bottom: 15%; }
+  25%     { left: 31%; bottom: 18%; }
+  50%     { left: 46%; bottom: 15%; }
+  75%     { left: 31%; bottom: 18%; }
+}
+@keyframes w3 {
+  0%,100% { left: 40%; bottom: 13%; }
+  25%     { left: 52%; bottom: 16%; }
+  50%     { left: 64%; bottom: 13%; }
+  75%     { left: 52%; bottom: 16%; }
+}
+@keyframes w4 {
+  0%,100% { left: 8%;  bottom: 16%; }
+  25%     { left: 23%; bottom: 19%; }
+  50%     { left: 38%; bottom: 16%; }
+  75%     { left: 23%; bottom: 19%; }
+}
+@keyframes w5 {
+  0%,100% { left: 54%; bottom: 14%; }
+  25%     { left: 67%; bottom: 17%; }
+  50%     { left: 80%; bottom: 14%; }
+  75%     { left: 67%; bottom: 17%; }
+}
+@keyframes w6 {
+  0%,100% { left: 63%; bottom: 15%; }
+  25%     { left: 75%; bottom: 18%; }
+  50%     { left: 87%; bottom: 15%; }
+  75%     { left: 75%; bottom: 18%; }
+}
+@keyframes w7 {
+  0%,100% { left: 28%; bottom: 14%; }
+  25%     { left: 40%; bottom: 17%; }
+  50%     { left: 52%; bottom: 14%; }
+  75%     { left: 40%; bottom: 17%; }
+}
+@keyframes cloud-drift {
+  from { transform: translateX(-250px); }
+  to   { transform: translateX(calc(100vw + 250px)); }
+}
+.wander-1 { animation: w1 11s ease-in-out infinite 0s;    position: absolute; }
+.wander-2 { animation: w2 15s ease-in-out infinite -4s;   position: absolute; }
+.wander-3 { animation: w3 9s  ease-in-out infinite -2s;   position: absolute; }
+.wander-4 { animation: w4 18s ease-in-out infinite -8s;   position: absolute; }
+.wander-5 { animation: w5 13s ease-in-out infinite -5s;   position: absolute; }
+.wander-6 { animation: w6 16s ease-in-out infinite -11s;  position: absolute; }
+.wander-7 { animation: w7 10s ease-in-out infinite -3s;   position: absolute; }
+
 /* ── Karakter animasyonları ── */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
