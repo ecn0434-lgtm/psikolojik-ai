@@ -109,12 +109,17 @@ export default function ChatPage() {
     window.location.href = '/'
   }
 
-  const modeLabels = { student: '🎓 Öğrenci', clinician: '🏥 Klinisyen', general: '👤 Genel' }
+  const tabConfig = [
+    { id: 'chat' as const, label: 'Sohbet', icon: BookOpen },
+    { id: 'search' as const, label: 'Arama', icon: Search },
+    { id: 'quiz' as const, label: 'Quiz', icon: Brain },
+  ]
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <div className="w-56 bg-indigo-900 text-white flex flex-col p-4">
+
+      {/* Sidebar — sadece masaüstü */}
+      <div className="hidden md:flex w-56 bg-indigo-900 text-white flex-col p-4 shrink-0">
         <h1 className="text-lg font-bold mb-6">Psikoloji AI</h1>
 
         <div className="text-xs text-indigo-300 mb-1">Mod</div>
@@ -128,15 +133,15 @@ export default function ChatPage() {
           <option value="general">👤 Genel</option>
         </select>
 
-        <button onClick={() => setTab('chat')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm mb-2 ${tab === 'chat' ? 'bg-indigo-700' : 'hover:bg-indigo-800'}`}>
-          <BookOpen size={16} /> Sohbet
-        </button>
-        <button onClick={() => setTab('search')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm mb-2 ${tab === 'search' ? 'bg-indigo-700' : 'hover:bg-indigo-800'}`}>
-          <Search size={16} /> Arama
-        </button>
-        <button onClick={() => setTab('quiz')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm mb-2 ${tab === 'quiz' ? 'bg-indigo-700' : 'hover:bg-indigo-800'}`}>
-          <Brain size={16} /> Quiz
-        </button>
+        {tabConfig.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm mb-2 ${tab === t.id ? 'bg-indigo-700' : 'hover:bg-indigo-800'}`}
+          >
+            <t.icon size={16} /> {t.label}
+          </button>
+        ))}
 
         <div className="flex-1" />
         <button onClick={logout} className="flex items-center gap-2 text-sm text-indigo-300 hover:text-white">
@@ -145,22 +150,39 @@ export default function ChatPage() {
       </div>
 
       {/* Ana içerik */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+
+        {/* Mobil üst bar */}
+        <div className="md:hidden flex items-center justify-between px-4 py-3 bg-indigo-900 text-white shrink-0">
+          <h1 className="text-base font-bold">Psikoloji AI</h1>
+          <select
+            value={mode}
+            onChange={e => setMode(e.target.value as any)}
+            className="bg-indigo-800 text-white text-xs rounded px-2 py-1"
+          >
+            <option value="student">🎓 Öğrenci</option>
+            <option value="clinician">🏥 Klinisyen</option>
+            <option value="general">👤 Genel</option>
+          </select>
+          <button onClick={logout} className="text-indigo-300 hover:text-white">
+            <LogOut size={18} />
+          </button>
+        </div>
 
         {/* SOHBET */}
         {tab === 'chat' && (
           <>
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4">
               {messages.length === 0 && (
-                <div className="text-center text-gray-400 mt-20">
-                  <p className="text-2xl mb-2">Psikoloji Asistanı</p>
-                  <p className="text-sm">Mod: {modeLabels[mode]} — DSM-5, genel psikoloji, her şeyi sorabilirsiniz</p>
+                <div className="text-center text-gray-400 mt-16">
+                  <p className="text-xl mb-2">Psikoloji Asistanı</p>
+                  <p className="text-sm px-4">DSM-5, genel psikoloji, her şeyi sorabilirsiniz</p>
                 </div>
               )}
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-2xl rounded-2xl px-4 py-3 ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white shadow text-gray-800'}`}>
-                    <div className="prose prose-sm max-w-none">
+                  <div className={`max-w-[85%] md:max-w-2xl rounded-2xl px-3 py-2 md:px-4 md:py-3 ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white shadow text-gray-800'}`}>
+                    <div className="prose prose-sm max-w-none text-sm md:text-base">
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
                     </div>
                     {msg.sources && msg.sources.length > 0 && (
@@ -184,14 +206,14 @@ export default function ChatPage() {
               )}
               <div ref={bottomRef} />
             </div>
-            <form onSubmit={sendMessage} className="p-4 bg-white border-t flex gap-2">
+            <form onSubmit={sendMessage} className="p-3 md:p-4 bg-white border-t flex gap-2 shrink-0">
               <input
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                placeholder="Soru sorun... (örn: Anksiyete nedir? Depresyon tanı kriterleri?)"
-                className="flex-1 border rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm"
+                placeholder="Soru sorun..."
+                className="flex-1 border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm min-w-0"
               />
-              <button type="submit" disabled={loading || !input.trim()} className="bg-indigo-600 text-white p-2 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition">
+              <button type="submit" disabled={loading || !input.trim()} className="bg-indigo-600 text-white p-2 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition shrink-0">
                 <Send size={18} />
               </button>
             </form>
@@ -200,22 +222,22 @@ export default function ChatPage() {
 
         {/* ARAMA */}
         {tab === 'search' && (
-          <div className="p-6 flex-1 overflow-y-auto">
-            <form onSubmit={handleSearch} className="flex gap-2 mb-6">
+          <div className="p-3 md:p-6 flex-1 overflow-y-auto">
+            <form onSubmit={handleSearch} className="flex gap-2 mb-4 md:mb-6">
               <input
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="DSM-5'te ara... (örn: F32, anksiyete, TSSB)"
-                className="flex-1 border rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                placeholder="DSM-5'te ara..."
+                className="flex-1 border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm min-w-0"
               />
-              <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700">Ara</button>
+              <button type="submit" className="bg-indigo-600 text-white px-3 py-2 rounded-xl hover:bg-indigo-700 text-sm shrink-0">Ara</button>
             </form>
             <div className="space-y-3">
               {searchResults.map((r, i) => (
-                <div key={i} className="bg-white rounded-xl shadow p-4">
+                <div key={i} className="bg-white rounded-xl shadow p-3 md:p-4">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium text-indigo-700">📚 {r.source}{r.page ? ` — s.${r.page}` : ''}</span>
-                    <span className="text-xs text-gray-400">{Math.round(r.similarity * 100)}% eşleşme</span>
+                    <span className="text-xs text-gray-400">{Math.round(r.similarity * 100)}%</span>
                   </div>
                   <p className="text-sm text-gray-700 leading-relaxed">{r.content}</p>
                 </div>
@@ -226,42 +248,42 @@ export default function ChatPage() {
 
         {/* QUIZ */}
         {tab === 'quiz' && (
-          <div className="p-6 flex-1 overflow-y-auto">
-            <form onSubmit={generateQuiz} className="bg-white rounded-2xl shadow p-5 mb-6 space-y-4">
-              <h2 className="text-lg font-semibold text-indigo-900">Quiz Üret</h2>
+          <div className="p-3 md:p-6 flex-1 overflow-y-auto">
+            <form onSubmit={generateQuiz} className="bg-white rounded-2xl shadow p-4 md:p-5 mb-4 md:mb-6 space-y-3 md:space-y-4">
+              <h2 className="text-base md:text-lg font-semibold text-indigo-900">Quiz Üret</h2>
               <input
                 value={quizTopic}
                 onChange={e => setQuizTopic(e.target.value)}
-                placeholder="Konu girin... (örn: majör depresif bozukluk, anksiyete, şizofreni)"
-                className="w-full border rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                placeholder="Konu girin... (örn: depresyon, anksiyete)"
+                className="w-full border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm"
               />
-              <div className="flex gap-4">
-                <div>
+              <div className="flex gap-3">
+                <div className="flex-1">
                   <label className="text-xs text-gray-500 block mb-1">Soru sayısı</label>
-                  <select value={quizCount} onChange={e => setQuizCount(Number(e.target.value))} className="border rounded-lg px-3 py-1.5 text-sm">
+                  <select value={quizCount} onChange={e => setQuizCount(Number(e.target.value))} className="w-full border rounded-lg px-2 py-1.5 text-sm">
                     <option value={3}>3</option>
                     <option value={5}>5</option>
                     <option value={10}>10</option>
                   </select>
                 </div>
-                <div>
+                <div className="flex-1">
                   <label className="text-xs text-gray-500 block mb-1">Soru tipi</label>
-                  <select value={quizType} onChange={e => setQuizType(e.target.value as any)} className="border rounded-lg px-3 py-1.5 text-sm">
+                  <select value={quizType} onChange={e => setQuizType(e.target.value as any)} className="w-full border rounded-lg px-2 py-1.5 text-sm">
                     <option value="mixed">Karışık</option>
                     <option value="multiple">Çoktan seçmeli</option>
                     <option value="open">Açık uçlu</option>
                   </select>
                 </div>
               </div>
-              <button type="submit" disabled={quizLoading || !quizTopic.trim()} className="w-full bg-indigo-600 text-white py-2 rounded-xl font-medium hover:bg-indigo-700 disabled:opacity-50 transition">
+              <button type="submit" disabled={quizLoading || !quizTopic.trim()} className="w-full bg-indigo-600 text-white py-2 rounded-xl font-medium hover:bg-indigo-700 disabled:opacity-50 transition text-sm">
                 {quizLoading ? 'Sorular üretiliyor...' : 'Quiz Oluştur'}
               </button>
             </form>
 
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               {quizQuestions.map((q, i) => (
-                <div key={i} className="bg-white rounded-2xl shadow p-5">
-                  <p className="font-medium text-gray-800 mb-3">{i + 1}. {q.question}</p>
+                <div key={i} className="bg-white rounded-2xl shadow p-4 md:p-5">
+                  <p className="font-medium text-gray-800 mb-3 text-sm md:text-base">{i + 1}. {q.question}</p>
                   {q.type === 'multiple' && q.options && (
                     <div className="space-y-1 mb-3">
                       {q.options.map((opt, oi) => (
@@ -286,6 +308,20 @@ export default function ChatPage() {
             </div>
           </div>
         )}
+
+        {/* Mobil alt navigasyon */}
+        <div className="md:hidden flex border-t bg-white shrink-0">
+          {tabConfig.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex-1 py-3 flex flex-col items-center gap-1 text-xs transition ${tab === t.id ? 'text-indigo-600' : 'text-gray-400'}`}
+            >
+              <t.icon size={20} />
+              {t.label}
+            </button>
+          ))}
+        </div>
 
       </div>
     </div>
