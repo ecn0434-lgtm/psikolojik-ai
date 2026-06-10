@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import ReactMarkdown from 'react-markdown'
 import { Send, Search, BookOpen, LogOut, Brain } from 'lucide-react'
+import AICharacter, { CharacterState } from '@/components/AICharacter'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -34,7 +35,9 @@ export default function ChatPage() {
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([])
   const [quizLoading, setQuizLoading] = useState(false)
   const [revealed, setRevealed] = useState<Record<number, boolean>>({})
+  const [charState, setCharState] = useState<CharacterState>('idle')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const talkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -49,6 +52,18 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Karakter durumu: loading→thinking, yanıt gelince→talking, 3sn sonra→idle
+  useEffect(() => {
+    if (loading) {
+      setCharState('thinking')
+      if (talkTimerRef.current) clearTimeout(talkTimerRef.current)
+    } else if (messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
+      setCharState('talking')
+      talkTimerRef.current = setTimeout(() => setCharState('idle'), 3000)
+    }
+    return () => { if (talkTimerRef.current) clearTimeout(talkTimerRef.current) }
+  }, [loading, messages])
+
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault()
     if (!input.trim() || loading) return
@@ -59,19 +74,20 @@ export default function ChatPage() {
     setLoading(true)
 
     const history = messages.map(m => ({ role: m.role, content: m.content }))
-
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ message: input, history, mode }),
     })
     const data = await res.json()
-
-    if (res.ok) {
-      setMessages(prev => [...prev, { role: 'assistant', content: data.answer, sources: data.sources }])
-    } else {
-      setMessages(prev => [...prev, { role: 'assistant', content: `Hata: ${data.error}` }])
-    }
+    setMessages(prev => [
+      ...prev,
+      {
+        role: 'assistant',
+        content: res.ok ? data.answer : `Hata: ${data.error}`,
+        sources: res.ok ? data.sources : [],
+      },
+    ])
     setLoading(false)
   }
 
@@ -93,7 +109,6 @@ export default function ChatPage() {
     setQuizLoading(true)
     setQuizQuestions([])
     setRevealed({})
-
     const res = await fetch('/api/quiz', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -116,17 +131,19 @@ export default function ChatPage() {
   ]
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen overflow-hidden" style={{ background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 50%, #e0e7ff 100%)' }}>
 
-      {/* Sidebar — sadece masaüstü */}
-      <div className="hidden md:flex w-56 bg-indigo-900 text-white flex-col p-4 shrink-0">
-        <h1 className="text-lg font-bold mb-6">Psikoloji AI</h1>
+      {/* Sidebar — masaüstü */}
+      <div className="hidden md:flex w-60 flex-col p-5 shrink-0" style={{ background: 'linear-gradient(180deg, #4c1d95 0%, #6d28d9 50%, #4338ca 100%)' }}>
+        <h1 className="text-lg font-bold text-white mb-2">Psikoloji AI</h1>
+        <p className="text-xs text-purple-300 mb-5">Psikoloji asistanınız</p>
 
-        <div className="text-xs text-indigo-300 mb-1">Mod</div>
+        <div className="text-xs text-purple-300 mb-1">Mod</div>
         <select
           value={mode}
           onChange={e => setMode(e.target.value as any)}
-          className="bg-indigo-800 text-white text-sm rounded px-2 py-1 mb-6"
+          className="text-white text-sm rounded-lg px-3 py-1.5 mb-6 border-0 outline-none cursor-pointer"
+          style={{ background: 'rgba(255,255,255,0.15)' }}
         >
           <option value="student">🎓 Öğrenci</option>
           <option value="clinician">🏥 Klinisyen</option>
@@ -137,14 +154,22 @@ export default function ChatPage() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm mb-2 ${tab === t.id ? 'bg-indigo-700' : 'hover:bg-indigo-800'}`}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm mb-2 text-left transition-all"
+            style={{
+              background: tab === t.id ? 'rgba(255,255,255,0.2)' : 'transparent',
+              color: tab === t.id ? 'white' : 'rgba(196,181,253,1)',
+            }}
           >
             <t.icon size={16} /> {t.label}
           </button>
         ))}
 
-        <div className="flex-1" />
-        <button onClick={logout} className="flex items-center gap-2 text-sm text-indigo-300 hover:text-white">
+        {/* Karakter - sidebar'da */}
+        <div className="flex-1 flex items-end justify-center pb-4">
+          <AICharacter state={charState} size={90} />
+        </div>
+
+        <button onClick={logout} className="flex items-center gap-2 text-sm text-purple-300 hover:text-white transition-colors mt-2">
           <LogOut size={16} /> Çıkış
         </button>
       </div>
@@ -153,18 +178,22 @@ export default function ChatPage() {
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
         {/* Mobil üst bar */}
-        <div className="md:hidden flex items-center justify-between px-4 py-3 bg-indigo-900 text-white shrink-0">
-          <h1 className="text-base font-bold">Psikoloji AI</h1>
+        <div className="md:hidden flex items-center justify-between px-4 py-3 shrink-0" style={{ background: 'linear-gradient(90deg, #4c1d95, #6d28d9)' }}>
+          <div className="flex items-center gap-2">
+            <AICharacter state={charState} size={36} />
+            <span className="text-white font-bold text-sm">Psikoloji AI</span>
+          </div>
           <select
             value={mode}
             onChange={e => setMode(e.target.value as any)}
-            className="bg-indigo-800 text-white text-xs rounded px-2 py-1"
+            className="text-white text-xs rounded-lg px-2 py-1 border-0 outline-none"
+            style={{ background: 'rgba(255,255,255,0.2)' }}
           >
             <option value="student">🎓 Öğrenci</option>
             <option value="clinician">🏥 Klinisyen</option>
             <option value="general">👤 Genel</option>
           </select>
-          <button onClick={logout} className="text-indigo-300 hover:text-white">
+          <button onClick={logout} className="text-purple-300 hover:text-white">
             <LogOut size={18} />
           </button>
         </div>
@@ -173,22 +202,41 @@ export default function ChatPage() {
         {tab === 'chat' && (
           <>
             <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4">
+
+              {/* Boş ekran: büyük karakter */}
               {messages.length === 0 && (
-                <div className="text-center text-gray-400 mt-16">
-                  <p className="text-xl mb-2">Psikoloji Asistanı</p>
-                  <p className="text-sm px-4">Psikoloji ile ilgili her şeyi sorabilirsiniz</p>
+                <div className="flex flex-col items-center justify-center h-full gap-4 pt-10">
+                  <AICharacter state={charState} size={130} />
+                  <div className="text-center">
+                    <p className="text-xl font-semibold text-purple-900">Merhaba! Ben Psiko 👋</p>
+                    <p className="text-sm text-purple-600 mt-1">Psikoloji ile ilgili her şeyi sorabilirsiniz</p>
+                  </div>
                 </div>
               )}
+
               {messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] md:max-w-2xl rounded-2xl px-3 py-2 md:px-4 md:py-3 ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white shadow text-gray-800'}`}>
-                    <div className="prose prose-sm max-w-none text-sm md:text-base">
+                <div key={i} className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  {/* AI avatar - mesajların yanında */}
+                  {msg.role === 'assistant' && (
+                    <div className="shrink-0 mb-1">
+                      <AICharacter state={i === messages.length - 1 ? charState : 'idle'} size={38} />
+                    </div>
+                  )}
+                  <div
+                    className="max-w-[80%] md:max-w-xl rounded-2xl px-4 py-3 text-sm shadow-sm"
+                    style={
+                      msg.role === 'user'
+                        ? { background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: 'white' }
+                        : { background: 'white', color: '#1e1b4b', border: '1px solid #ede9fe' }
+                    }
+                  >
+                    <div className="prose prose-sm max-w-none">
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
                     </div>
                     {msg.sources && msg.sources.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-gray-100 flex flex-wrap gap-1">
-                        {msg.sources.slice(0, 5).map((s, si) => (
-                          <span key={si} className="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full">
+                      <div className="mt-2 pt-2 border-t border-purple-100 flex flex-wrap gap-1">
+                        {msg.sources.slice(0, 4).map((s, si) => (
+                          <span key={si} className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#f5f3ff', color: '#6d28d9' }}>
                             📚 {s.source}{s.page ? ` s.${s.page}` : ''}
                           </span>
                         ))}
@@ -197,23 +245,36 @@ export default function ChatPage() {
                   </div>
                 </div>
               ))}
+
               {loading && (
-                <div className="flex justify-start">
-                  <div className="bg-white shadow rounded-2xl px-4 py-3 text-gray-400 text-sm animate-pulse">
-                    Yanıt hazırlanıyor...
+                <div className="flex items-end gap-2 justify-start">
+                  <AICharacter state="thinking" size={38} />
+                  <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-purple-100 flex gap-1 items-center">
+                    <div className="w-2 h-2 rounded-full bg-purple-400 animate-dot-1" />
+                    <div className="w-2 h-2 rounded-full bg-purple-500 animate-dot-2" />
+                    <div className="w-2 h-2 rounded-full bg-purple-600 animate-dot-3" />
                   </div>
                 </div>
               )}
               <div ref={bottomRef} />
             </div>
-            <form onSubmit={sendMessage} className="p-3 md:p-4 bg-white border-t flex gap-2 shrink-0">
+
+            {/* Mesaj giriş alanı */}
+            <form onSubmit={sendMessage} className="p-3 md:p-4 shrink-0 flex gap-2"
+              style={{ background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(10px)', borderTop: '1px solid #ede9fe' }}>
               <input
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 placeholder="Soru sorun..."
-                className="flex-1 border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm min-w-0"
+                className="flex-1 rounded-2xl px-4 py-2.5 text-sm outline-none min-w-0 text-purple-900 placeholder-purple-300"
+                style={{ background: 'white', border: '1.5px solid #ddd6fe' }}
               />
-              <button type="submit" disabled={loading || !input.trim()} className="bg-indigo-600 text-white p-2 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition shrink-0">
+              <button
+                type="submit"
+                disabled={loading || !input.trim()}
+                className="shrink-0 p-2.5 rounded-2xl text-white transition disabled:opacity-40"
+                style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}
+              >
                 <Send size={18} />
               </button>
             </form>
@@ -223,21 +284,28 @@ export default function ChatPage() {
         {/* ARAMA */}
         {tab === 'search' && (
           <div className="p-3 md:p-6 flex-1 overflow-y-auto">
-            <form onSubmit={handleSearch} className="flex gap-2 mb-4 md:mb-6">
+            <form onSubmit={handleSearch} className="flex gap-2 mb-5">
               <input
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="DSM-5'te ara..."
-                className="flex-1 border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm min-w-0"
+                placeholder="Psikoloji literatüründe ara..."
+                className="flex-1 rounded-2xl px-4 py-2.5 text-sm outline-none min-w-0 text-purple-900 placeholder-purple-300"
+                style={{ background: 'white', border: '1.5px solid #ddd6fe' }}
               />
-              <button type="submit" className="bg-indigo-600 text-white px-3 py-2 rounded-xl hover:bg-indigo-700 text-sm shrink-0">Ara</button>
+              <button
+                type="submit"
+                className="px-4 py-2.5 rounded-2xl text-white text-sm font-medium"
+                style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}
+              >
+                Ara
+              </button>
             </form>
             <div className="space-y-3">
               {searchResults.map((r, i) => (
-                <div key={i} className="bg-white rounded-xl shadow p-3 md:p-4">
+                <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-purple-100">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-indigo-700">📚 {r.source}{r.page ? ` — s.${r.page}` : ''}</span>
-                    <span className="text-xs text-gray-400">{Math.round(r.similarity * 100)}%</span>
+                    <span className="text-sm font-medium text-purple-700">📚 {r.source}{r.page ? ` — s.${r.page}` : ''}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full text-purple-600" style={{ background: '#f5f3ff' }}>{Math.round(r.similarity * 100)}%</span>
                   </div>
                   <p className="text-sm text-gray-700 leading-relaxed">{r.content}</p>
                 </div>
@@ -249,56 +317,62 @@ export default function ChatPage() {
         {/* QUIZ */}
         {tab === 'quiz' && (
           <div className="p-3 md:p-6 flex-1 overflow-y-auto">
-            <form onSubmit={generateQuiz} className="bg-white rounded-2xl shadow p-4 md:p-5 mb-4 md:mb-6 space-y-3 md:space-y-4">
-              <h2 className="text-base md:text-lg font-semibold text-indigo-900">Quiz Üret</h2>
+            <form onSubmit={generateQuiz} className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 md:p-5 mb-5 space-y-3">
+              <h2 className="text-base md:text-lg font-semibold text-purple-900">Quiz Üret</h2>
               <input
                 value={quizTopic}
                 onChange={e => setQuizTopic(e.target.value)}
                 placeholder="Konu girin... (örn: depresyon, anksiyete)"
-                className="w-full border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm"
+                className="w-full rounded-2xl px-4 py-2.5 text-sm outline-none text-purple-900 placeholder-purple-300"
+                style={{ background: '#faf5ff', border: '1.5px solid #ddd6fe' }}
               />
               <div className="flex gap-3">
-                <div className="flex-1">
-                  <label className="text-xs text-gray-500 block mb-1">Soru sayısı</label>
-                  <select value={quizCount} onChange={e => setQuizCount(Number(e.target.value))} className="w-full border rounded-lg px-2 py-1.5 text-sm">
-                    <option value={3}>3</option>
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                  </select>
-                </div>
-                <div className="flex-1">
-                  <label className="text-xs text-gray-500 block mb-1">Soru tipi</label>
-                  <select value={quizType} onChange={e => setQuizType(e.target.value as any)} className="w-full border rounded-lg px-2 py-1.5 text-sm">
-                    <option value="mixed">Karışık</option>
-                    <option value="multiple">Çoktan seçmeli</option>
-                    <option value="open">Açık uçlu</option>
-                  </select>
-                </div>
+                {[
+                  { label: 'Soru sayısı', value: quizCount, onChange: (v: string) => setQuizCount(Number(v)), options: [['3','3'],['5','5'],['10','10']] },
+                  { label: 'Soru tipi', value: quizType, onChange: (v: string) => setQuizType(v as any), options: [['mixed','Karışık'],['multiple','Çoktan seçmeli'],['open','Açık uçlu']] },
+                ].map(f => (
+                  <div key={f.label} className="flex-1">
+                    <label className="text-xs text-purple-400 block mb-1">{f.label}</label>
+                    <select
+                      value={f.value}
+                      onChange={e => f.onChange(e.target.value)}
+                      className="w-full rounded-xl px-3 py-1.5 text-sm outline-none text-purple-900"
+                      style={{ background: '#faf5ff', border: '1.5px solid #ddd6fe' }}
+                    >
+                      {f.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                  </div>
+                ))}
               </div>
-              <button type="submit" disabled={quizLoading || !quizTopic.trim()} className="w-full bg-indigo-600 text-white py-2 rounded-xl font-medium hover:bg-indigo-700 disabled:opacity-50 transition text-sm">
+              <button
+                type="submit"
+                disabled={quizLoading || !quizTopic.trim()}
+                className="w-full py-2.5 rounded-2xl text-white font-medium text-sm transition disabled:opacity-40"
+                style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}
+              >
                 {quizLoading ? 'Sorular üretiliyor...' : 'Quiz Oluştur'}
               </button>
             </form>
 
             <div className="space-y-3 md:space-y-4">
               {quizQuestions.map((q, i) => (
-                <div key={i} className="bg-white rounded-2xl shadow p-4 md:p-5">
-                  <p className="font-medium text-gray-800 mb-3 text-sm md:text-base">{i + 1}. {q.question}</p>
+                <div key={i} className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 md:p-5">
+                  <p className="font-medium text-purple-900 mb-3 text-sm md:text-base">{i + 1}. {q.question}</p>
                   {q.type === 'multiple' && q.options && (
-                    <div className="space-y-1 mb-3">
+                    <div className="space-y-1.5 mb-3">
                       {q.options.map((opt, oi) => (
-                        <p key={oi} className="text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-1.5">{opt}</p>
+                        <p key={oi} className="text-sm text-gray-600 rounded-xl px-3 py-2" style={{ background: '#faf5ff' }}>{opt}</p>
                       ))}
                     </div>
                   )}
                   <button
                     onClick={() => setRevealed(prev => ({ ...prev, [i]: !prev[i] }))}
-                    className="text-sm text-indigo-600 font-medium hover:underline"
+                    className="text-sm text-purple-600 font-medium hover:text-purple-800 transition"
                   >
-                    {revealed[i] ? 'Cevabı Gizle' : 'Cevabı Göster'}
+                    {revealed[i] ? 'Cevabı Gizle ▲' : 'Cevabı Göster ▼'}
                   </button>
                   {revealed[i] && (
-                    <div className="mt-3 p-3 bg-green-50 rounded-xl text-sm">
+                    <div className="mt-3 p-3 rounded-xl text-sm" style={{ background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)' }}>
                       <p className="font-medium text-green-800">Cevap: {q.answer}</p>
                       <p className="text-green-700 mt-1">{q.explanation}</p>
                     </div>
@@ -310,12 +384,13 @@ export default function ChatPage() {
         )}
 
         {/* Mobil alt navigasyon */}
-        <div className="md:hidden flex border-t bg-white shrink-0">
+        <div className="md:hidden flex shrink-0" style={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', borderTop: '1px solid #ede9fe' }}>
           {tabConfig.map(t => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex-1 py-3 flex flex-col items-center gap-1 text-xs transition ${tab === t.id ? 'text-indigo-600' : 'text-gray-400'}`}
+              className="flex-1 py-3 flex flex-col items-center gap-0.5 text-xs transition-colors"
+              style={{ color: tab === t.id ? '#6d28d9' : '#a78bfa' }}
             >
               <t.icon size={20} />
               {t.label}
