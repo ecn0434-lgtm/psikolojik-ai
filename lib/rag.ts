@@ -8,20 +8,21 @@ export interface SearchResult {
   similarity: number
 }
 
-let _embedder: any = null
-
-async function getEmbedder() {
-  if (!_embedder) {
-    const { pipeline } = await import('@xenova/transformers')
-    _embedder = await pipeline('feature-extraction', 'Xenova/paraphrase-multilingual-MiniLM-L12-v2')
-  }
-  return _embedder
-}
-
 export async function embedText(text: string): Promise<number[]> {
-  const embedder = await getEmbedder()
-  const result = await embedder(text, { pooling: 'mean', normalize: true })
-  return Array.from(result.data as Float32Array)
+  const res = await fetch(
+    'https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+      },
+      body: JSON.stringify({ inputs: text, options: { wait_for_model: true } }),
+    }
+  )
+  if (!res.ok) throw new Error(`Embedding hatası: ${res.status}`)
+  const data = await res.json()
+  return Array.isArray(data[0]) ? data[0] : data
 }
 
 export async function searchDocuments(
