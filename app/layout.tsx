@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Psikolojik AI",
-  description: "DSM-5 ve ICD-11 tabanlı Türkçe psikoloji asistanı",
+  description: "Türkçe psikoloji asistanı — öğrenciler, klinisyenler ve meraklılar için.",
 };
 
 export default function RootLayout({

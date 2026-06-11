@@ -9,6 +9,8 @@ create table profiles (
   plan text check (plan in ('free', 'student', 'clinician', 'admin')) default 'free',
   daily_queries int default 0,
   last_query_date date default current_date,
+  stripe_customer_id text,
+  stripe_subscription_id text,
   created_at timestamptz default now()
 );
 
@@ -16,7 +18,7 @@ create table profiles (
 create table documents (
   id bigserial primary key,
   content text not null,
-  source text not null,          -- 'DSM-5', 'ICD-11', 'web', vb.
+  source text not null,
   page int,
   url text,
   embedding vector(384),         -- multilingual-MiniLM boyutu

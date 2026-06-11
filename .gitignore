@@ -47,3 +47,5 @@ __pycache__/
 
 # model cache
 .cache/
+
+.vercel

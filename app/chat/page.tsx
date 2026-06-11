@@ -37,6 +37,8 @@ export default function ChatPage() {
   const [quizLoading, setQuizLoading] = useState(false)
   const [revealed, setRevealed] = useState<Record<number, boolean>>({})
   const [charState, setCharState] = useState<CharacterState>('idle')
+  const [plan, setPlan] = useState('free')
+  const [showSubBanner, setShowSubBanner] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const talkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -44,8 +46,17 @@ export default function ChatPage() {
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) { window.location.href = '/login'; return }
       setToken(data.session.access_token)
-      supabase.from('profiles').select('mode').eq('id', data.session.user.id).single()
-        .then(({ data: p }) => { if (p?.mode) setMode(p.mode as any) })
+      supabase.from('profiles').select('mode, plan').eq('id', data.session.user.id).single()
+        .then(({ data: p }) => {
+          if (p?.mode) setMode(p.mode as any)
+          if (p?.plan) setPlan(p.plan)
+        })
+      // Stripe'tan dönen başarı mesajı
+      if (typeof window !== 'undefined' && window.location.search.includes('subscribed=true')) {
+        setShowSubBanner(true)
+        window.history.replaceState({}, '', '/chat')
+        setTimeout(() => setShowSubBanner(false), 5000)
+      }
     })
   }, [])
 
@@ -171,6 +182,19 @@ export default function ChatPage() {
           <AICharacter state={charState} size={90} />
         </div>
 
+        {plan === 'free' && (
+          <a href="/pricing"
+            className="block text-center text-xs py-2 px-3 rounded-xl mb-3 font-semibold transition hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white' }}>
+            ⚡ Planı Yükselt
+          </a>
+        )}
+        {plan !== 'free' && (
+          <div className="text-xs text-center text-purple-300 mb-3">
+            {plan === 'student' ? '🎓 Öğrenci' : '🏥 Profesyonel'} Plan
+          </div>
+        )}
+
         <button onClick={logout} className="flex items-center gap-2 text-sm text-purple-300 hover:text-white transition-colors mt-2">
           <LogOut size={16} /> Çıkış
         </button>
@@ -203,6 +227,12 @@ export default function ChatPage() {
         {/* SOHBET */}
         {tab === 'chat' && (
           <>
+            {showSubBanner && (
+              <div className="px-4 py-3 text-sm font-medium text-center text-white shrink-0"
+                style={{ background: 'linear-gradient(135deg, #059669, #047857)' }}>
+                🎉 Aboneliğiniz aktif! Hoş geldiniz.
+              </div>
+            )}
             <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4" style={{ background: 'rgba(255,255,255,0.55)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
 
               {/* Boş ekran: büyük karakter */}
@@ -290,7 +320,7 @@ export default function ChatPage() {
               <input
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Psikoloji literatüründe ara..."
+                placeholder="Psikoloji kaynakları içinde ara..."
                 className="flex-1 rounded-2xl px-4 py-2.5 text-sm outline-none min-w-0 text-purple-900 placeholder-purple-300"
                 style={{ background: 'white', border: '1.5px solid #ddd6fe' }}
               />
