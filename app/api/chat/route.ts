@@ -23,20 +23,21 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (profile) {
-      const lastDate = new Date(profile.last_query_date)
-      const today = new Date()
-      const isNewDay = lastDate.toDateString() !== today.toDateString()
-      const count = isNewDay ? 0 : profile.daily_queries
-      const limits: Record<string, number> = { free: 20, student: 100, clinician: 999999, admin: 999999 }
-      const limit = limits[profile.plan] ?? 20
+      const now = new Date()
+      const windowStart = profile.last_query_date ? new Date(profile.last_query_date) : null
+      const isNewWindow = !windowStart ||
+        (now.getTime() - windowStart.getTime()) >= 24 * 60 * 60 * 1000
+      const count = isNewWindow ? 0 : profile.daily_queries
+      const limits: Record<string, number> = { free: 5, student: 100, clinician: 999999, admin: 999999 }
+      const limit = limits[profile.plan] ?? 5
 
       if (count >= limit) {
-        return NextResponse.json({ error: 'Günlük sorgu limitinize ulaştınız.' }, { status: 429 })
+        return NextResponse.json({ error: 'Sorgu limitinize ulaştınız. 24 saat sonra yenilenir.' }, { status: 429 })
       }
 
       await supabase.from('profiles').update({
-        daily_queries: isNewDay ? 1 : count + 1,
-        last_query_date: today.toISOString().split('T')[0],
+        daily_queries: isNewWindow ? 1 : count + 1,
+        ...(isNewWindow ? { last_query_date: now.toISOString() } : {}),
       }).eq('id', user.id)
     }
 
